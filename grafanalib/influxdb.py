@@ -32,23 +32,30 @@ class InfluxdbTarget(object):
 
     def to_json_data(self):
 
-        tag_operator = self.tags[0]['operator']
-        tag_value = self.tags[0]['value']
-        tag_key = self.tags[0]['key']
+        tag_query = 'WHERE $timeFilter'
 
-        if tag_operator != '=~':
-            tag_value = '\'{}\''.format(tag_value)
+        if self.tags:
+            tag_operator = self.tags[0]['operator']
+            tag_value = self.tags[0]['value']
+            tag_key = self.tags[0]['key']
+
+            if tag_operator != '=~':
+                tag_value = '\'{}\''.format(tag_value)
+
+            tag_query = 'WHERE ("{tag_key}" {tag_operator} {tag_value}) AND $timeFilter'.format(
+                    tag_key=tag_key,
+                    tag_operator=tag_operator,
+                    tag_value=tag_value
+                )
 
         query = self.query or 'SELECT {select_type}({select_param}) \
                                 FROM {measurement} \
-                                WHERE ("{tag_key}" {tag_operator} {tag_value}) AND $timeFilter \
+                                {tag_query} \
                                 GROUP BY time($__interval) fill(null)'.format(
                                     select_type=self.select_type,
                                     select_param=self.select_param,
                                     measurement=self.measurement,
-                                    tag_key=tag_key,
-                                    tag_operator=tag_operator,
-                                    tag_value=tag_value
+                                    tag_query=tag_query
                                 )
         query = ' '.join(query.split())
 
